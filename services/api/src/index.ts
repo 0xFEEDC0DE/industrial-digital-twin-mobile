@@ -5,6 +5,8 @@ import { scanRoutes } from './routes/scan.js';
 import { trainingRoutes } from './routes/training.js';
 import { reconstructionRoutes } from './routes/reconstruction.js';
 import { exportRoutes } from './routes/export.js';
+import { sceneTagsRoutes } from './routes/sceneTags.js';
+import { debugRoutes } from './routes/debug.js';
 
 const app = express();
 const port = Number(process.env.PORT ?? 4000);
@@ -17,7 +19,7 @@ app.get('/api/health', (_req, res) => {
     ok: true,
     service: 'industrial-digital-twin-api',
     timestamp: new Date().toISOString(),
-    version: '0.2.0',
+    version: '0.3.0',
   });
 });
 
@@ -25,6 +27,8 @@ app.use('/api', scanRoutes);
 app.use('/api', trainingRoutes);
 app.use('/api', reconstructionRoutes);
 app.use('/api', exportRoutes);
+app.use('/api', sceneTagsRoutes);
+app.use('/api', debugRoutes);
 
 app.listen(port, () => {
   console.log(`Industrial digital twin API running on http://localhost:${port}`);
