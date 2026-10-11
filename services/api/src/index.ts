@@ -8,6 +8,7 @@ import { exportRoutes } from './routes/export.js';
 import { scenesRoutes } from './routes/scenes.js';
 import { sceneTagsRoutes } from './routes/sceneTags.js';
 import { debugRoutes } from './routes/debug.js';
+import { runtimeRoutes } from './routes/runtime.js';
 
 const app = express();
 const port = Number(process.env.PORT ?? 4000);
@@ -31,6 +32,7 @@ app.use('/api', exportRoutes);
 app.use('/api', scenesRoutes);
 app.use('/api', sceneTagsRoutes);
 app.use('/api', debugRoutes);
+app.use('/api', runtimeRoutes);
 
 app.listen(port, () => {
   console.log(`Industrial digital twin API running on http://localhost:${port}`);
