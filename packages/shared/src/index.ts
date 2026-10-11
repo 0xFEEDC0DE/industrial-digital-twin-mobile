@@ -3,6 +3,8 @@ export type CaptureMode = 'guided' | 'freeform' | 'automated';
 export type SceneStatus = 'queued' | 'processing' | 'ready' | 'failed';
 export type TrainingType = 'ar-training' | 'vr-training' | 'hybrid-training';
 export type ReconstructionPhase = 'capture' | 'frames' | 'sfm' | 'depth' | 'mesh' | 'texture' | 'splat' | 'export';
+export type SimulationMode = 'live' | 'historian-replay' | 'logic-test';
+export type SimulationStatus = 'queued' | 'running' | 'completed' | 'failed';
 
 export interface ScanRequest {
   id: string;
@@ -44,6 +46,17 @@ export interface SceneMetadata {
   } | null;
 }
 
+export interface SceneArtifact {
+  id: string;
+  sceneId: string;
+  kind: 'mesh' | 'texture' | 'gltf' | 'splat' | 'thumbnail';
+  path: string;
+  checksum?: string;
+  sizeBytes?: number;
+  ready: boolean;
+  createdAt: string;
+}
+
 export interface Scene {
   id: string;
   name: string;
@@ -55,6 +68,7 @@ export interface Scene {
   gaussianReady: boolean;
   tags: string[];
   metadata: SceneMetadata;
+  artifacts?: SceneArtifact[];
 }
 
 export interface TrainingScenario {
@@ -84,4 +98,55 @@ export interface ReconstructionJob {
     splat?: string;
   };
   metadata?: Partial<SceneMetadata>;
+}
+
+export interface SimulationEvent {
+  timestamp: string;
+  type: 'sensor' | 'operator' | 'hazard' | 'system';
+  label: string;
+  value?: number;
+}
+
+export interface SimulationResult {
+  id: string;
+  simulationId: string;
+  sceneId: string;
+  scenarioId: string;
+  operatorActions: string[];
+  sensorEvents: Array<{ timestamp: string; value: number }>;
+  anomalies: string[];
+  completedAt: string;
+  success: boolean;
+}
+
+export interface SimulationJob {
+  id: string;
+  sceneId: string;
+  scenarioId: string;
+  status: SimulationStatus;
+  progress: number;
+  mode: SimulationMode;
+  startedAt: string;
+  completedAt?: string;
+  historianWindow?: HistorianWindow;
+  logicControllers?: string[];
+  events?: SimulationEvent[];
+  results?: SimulationResult;
+}
+
+export interface TrainingProgressStep {
+  id: string;
+  label: string;
+  completed: boolean;
+  completedAt?: string;
+  score?: number;
+}
+
+export interface TrainingEvaluation {
+  scenarioId: string;
+  sceneId: string;
+  passed: boolean;
+  score: number;
+  completedAt: string;
+  steps: TrainingProgressStep[];
 }
