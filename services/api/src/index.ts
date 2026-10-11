@@ -5,6 +5,7 @@ import { scanRoutes } from './routes/scan.js';
 import { trainingRoutes } from './routes/training.js';
 import { reconstructionRoutes } from './routes/reconstruction.js';
 import { exportRoutes } from './routes/export.js';
+import { scenesRoutes } from './routes/scenes.js';
 import { sceneTagsRoutes } from './routes/sceneTags.js';
 import { debugRoutes } from './routes/debug.js';
 
@@ -19,7 +20,7 @@ app.get('/api/health', (_req, res) => {
     ok: true,
     service: 'industrial-digital-twin-api',
     timestamp: new Date().toISOString(),
-    version: '0.3.0',
+    version: '0.4.0',
   });
 });
 
@@ -27,6 +28,7 @@ app.use('/api', scanRoutes);
 app.use('/api', trainingRoutes);
 app.use('/api', reconstructionRoutes);
 app.use('/api', exportRoutes);
+app.use('/api', scenesRoutes);
 app.use('/api', sceneTagsRoutes);
 app.use('/api', debugRoutes);
 

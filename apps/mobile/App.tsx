@@ -12,45 +12,86 @@ import {
 type CaptureMode = 'Live camera' | 'Preset video' | 'Image set';
 
 type Scene = {
+  id: string;
   name: string;
+  area: string;
   status: string;
   progress: number;
   exportReady: boolean;
+  textureScore: number;
+  gaussianReady: boolean;
+  tags: string[];
 };
 
-type TrainingModule = {
+type TrainingStep = {
   id: string;
-  title: string;
-  environment: string;
-  status: 'ready' | 'in-progress' | 'queued';
+  label: string;
+  complete: boolean;
 };
 
 const scanModes: CaptureMode[] = ['Live camera', 'Preset video', 'Image set'];
 
 const scenes: Scene[] = [
-  { name: 'Compressor hall A', status: 'texturing active', progress: 82, exportReady: true },
-  { name: 'Packaging line 3', status: 'scan in progress', progress: 48, exportReady: false },
-  { name: 'Water treatment intake', status: 'training export ready', progress: 96, exportReady: true },
+  {
+    id: 'compressor-hall-a',
+    name: 'Compressor hall A',
+    area: 'Plant floor / compressor room',
+    status: 'Texturing active',
+    progress: 82,
+    exportReady: true,
+    textureScore: 92,
+    gaussianReady: true,
+    tags: ['compressor', 'safety zone', 'pipe run', 'valve stack'],
+  },
+  {
+    id: 'packaging-line-3',
+    name: 'Packaging line 3',
+    area: 'Assembly / packaging',
+    status: 'Scan in progress',
+    progress: 48,
+    exportReady: false,
+    textureScore: 71,
+    gaussianReady: false,
+    tags: ['conveyor', 'inspection point', 'guard rail'],
+  },
+  {
+    id: 'water-treatment-intake',
+    name: 'Water treatment intake',
+    area: 'Utility / treatment',
+    status: 'Training export ready',
+    progress: 96,
+    exportReady: true,
+    textureScore: 95,
+    gaussianReady: true,
+    tags: ['intake manifold', 'risk zone', 'utility corridor'],
+  },
 ];
 
-const trainingModules: TrainingModule[] = [
-  { id: 'safety', title: 'Lockout / tagout walkthrough', environment: 'Factory floor', status: 'ready' },
-  { id: 'inspection', title: 'Equipment inspection drill', environment: 'Maintenance bay', status: 'in-progress' },
-  { id: 'startup', title: 'Startup procedure simulation', environment: 'Compressor room', status: 'queued' },
+const trainingSteps: TrainingStep[] = [
+  { id: 'inspect', label: 'Inspect machine state and hazard markers', complete: true },
+  { id: 'lockout', label: 'Verify lockout / tagout and PPE status', complete: true },
+  { id: 'operate', label: 'Start inspection routine', complete: false },
+  { id: 'confirm', label: 'Confirm final condition and sign off', complete: false },
 ];
 
-const exportTargets = ['glTF', 'USDZ', 'Gaussian Splat', 'AR / VR'];
+const exportFormats = ['glTF', 'USDZ', 'PLY', 'Gaussian Splat', 'WebXR'];
 
 export default function App() {
   const [selectedMode, setSelectedMode] = useState<CaptureMode>('Live camera');
+  const [selectedSceneId, setSelectedSceneId] = useState<string>('compressor-hall-a');
 
-  const activeScene = useMemo(() => {
-    return scenes.find((scene) => scene.progress >= 80) ?? scenes[0];
-  }, []);
+  const selectedScene = useMemo(
+    () => scenes.find((scene) => scene.id === selectedSceneId) ?? scenes[0],
+    [selectedSceneId],
+  );
 
   const handleModePress = (mode: CaptureMode) => {
     setSelectedMode(mode);
     Alert.alert('Capture flow selected', `${mode} was selected for the next scan job.`);
+  };
+
+  const handleExport = (format: string) => {
+    Alert.alert('Export queued', `${format} export has been scheduled for ${selectedScene.name}.`);
   };
 
   return (
@@ -60,8 +101,8 @@ export default function App() {
           <Text style={styles.kicker}>Industrial digital twin</Text>
           <Text style={styles.title}>Mobile scan studio</Text>
           <Text style={styles.subtitle}>
-            Capture industrial scenes from mobile cameras, videos, or image sequences and convert them
-            into textured 3D twins for training and maintenance.
+            Create textured industrial scenes from phone cameras, preset video, or image sets and use
+            them for maintenance training and plant operations review.
           </Text>
         </View>
 
@@ -84,53 +125,66 @@ export default function App() {
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Active scene</Text>
-          <Text style={styles.sceneName}>{activeScene.name}</Text>
-          <Text style={styles.sceneStatus}>{activeScene.status}</Text>
-          <View style={styles.progressBarTrack}>
-            <View style={[styles.progressBarFill, { width: `${activeScene.progress}%` }]} />
+          <Text style={styles.cardTitle}>Scene detail</Text>
+          <View style={styles.sceneList}>
+            {scenes.map((scene) => (
+              <Pressable
+                key={scene.id}
+                onPress={() => setSelectedSceneId(scene.id)}
+                style={[styles.sceneItem, scene.id === selectedSceneId && styles.sceneItemSelected]}
+              >
+                <Text style={styles.sceneItemTitle}>{scene.name}</Text>
+                <Text style={styles.sceneItemMeta}>{scene.area}</Text>
+              </Pressable>
+            ))}
           </View>
-          <Text style={styles.progressText}>{activeScene.progress}% complete</Text>
-          <Text style={styles.exportHint}>
-            {activeScene.exportReady ? 'Ready for export' : 'Processing scene export'}
-          </Text>
-        </View>
 
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Scene library</Text>
-          {scenes.map((scene) => (
-            <View key={scene.name} style={styles.sceneRow}>
-              <View>
-                <Text style={styles.sceneRowName}>{scene.name}</Text>
-                <Text style={styles.sceneRowStatus}>{scene.status}</Text>
-              </View>
-              <Text style={styles.sceneRowPct}>{scene.progress}%</Text>
+          <Text style={styles.sceneName}>{selectedScene.name}</Text>
+          <Text style={styles.sceneInfo}>{selectedScene.area}</Text>
+          <Text style={styles.sceneStatus}>{selectedScene.status}</Text>
+
+          <View style={styles.progressBarTrack}>
+            <View style={[styles.progressBarFill, { width: `${selectedScene.progress}%` }]} />
+          </View>
+          <Text style={styles.progressText}>{selectedScene.progress}% reconstruction complete</Text>
+
+          <View style={styles.metricsRow}>
+            <View style={styles.metricBox}>
+              <Text style={styles.metricLabel}>Texture</Text>
+              <Text style={styles.metricValue}>{selectedScene.textureScore}%</Text>
             </View>
-          ))}
+            <View style={styles.metricBox}>
+              <Text style={styles.metricLabel}>Splat</Text>
+              <Text style={styles.metricValue}>{selectedScene.gaussianReady ? 'Ready' : 'Queued'}</Text>
+            </View>
+          </View>
+
+          <View style={styles.tagRow}>
+            {selectedScene.tags.map((tag) => (
+              <Text key={tag} style={styles.tag}>
+                {tag}
+              </Text>
+            ))}
+          </View>
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Training modules</Text>
-          {trainingModules.map((module) => (
-            <View key={module.id} style={styles.trainingRow}>
-              <View>
-                <Text style={styles.trainingTitle}>{module.title}</Text>
-                <Text style={styles.trainingMeta}>{module.environment}</Text>
-              </View>
-              <Text style={[styles.trainingBadge, module.status === 'ready' && styles.trainingBadgeReady]}>
-                {module.status}
-              </Text>
+          <Text style={styles.cardTitle}>Training workflow</Text>
+          {trainingSteps.map((step) => (
+            <View key={step.id} style={styles.stepRow}>
+              <View style={[styles.stepDot, step.complete && styles.stepDotComplete]} />
+              <Text style={[styles.stepLabel, step.complete && styles.stepLabelComplete]}>{step.label}</Text>
             </View>
           ))}
         </View>
 
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Export targets</Text>
-          <View style={styles.tagRow}>
-            {exportTargets.map((target) => (
-              <Text key={target} style={styles.tag}>
-                {target}
-              </Text>
+          <View style={styles.exportRow}>
+            {exportFormats.map((format) => (
+              <Pressable key={format} onPress={() => handleExport(format)} style={styles.exportButton}>
+                <Text style={styles.exportButtonText}>{format}</Text>
+              </Pressable>
             ))}
           </View>
         </View>
@@ -206,15 +260,46 @@ const styles = StyleSheet.create({
   modeButtonTextSelected: {
     color: '#ffffff',
   },
+  sceneList: {
+    gap: 8,
+    marginBottom: 12,
+  },
+  sceneItem: {
+    borderRadius: 10,
+    backgroundColor: '#152b39',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: '#213949',
+  },
+  sceneItemSelected: {
+    backgroundColor: '#1e3a5f',
+    borderColor: '#60a5fa',
+  },
+  sceneItemTitle: {
+    color: '#f8fafc',
+    fontWeight: '700',
+  },
+  sceneItemMeta: {
+    color: '#9fb6c6',
+    fontSize: 12,
+    marginTop: 4,
+  },
   sceneName: {
     color: '#f8fafc',
     fontSize: 22,
     fontWeight: '700',
+    marginTop: 10,
+  },
+  sceneInfo: {
+    color: '#dbeafe',
+    marginTop: 4,
   },
   sceneStatus: {
     color: '#7dd3fc',
-    marginTop: 6,
+    marginTop: 8,
     marginBottom: 12,
+    fontWeight: '600',
   },
   progressBarTrack: {
     height: 10,
@@ -232,69 +317,33 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontSize: 12,
   },
-  exportHint: {
-    color: '#a7f3d0',
-    marginTop: 8,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  sceneRow: {
+  metricsRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#1d2d39',
+    gap: 12,
+    marginTop: 14,
   },
-  sceneRowName: {
-    color: '#e2e8f0',
-    fontWeight: '600',
-  },
-  sceneRowStatus: {
-    color: '#7dd3fc',
-    fontSize: 12,
-    marginTop: 4,
-  },
-  sceneRowPct: {
-    color: '#f8fafc',
-    fontWeight: '700',
-  },
-  trainingRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#162b3a',
+  metricBox: {
+    flex: 1,
+    backgroundColor: '#112838',
     borderRadius: 10,
     padding: 12,
-    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#1b3347',
   },
-  trainingTitle: {
-    color: '#f8fafc',
-    fontWeight: '700',
-  },
-  trainingMeta: {
+  metricLabel: {
     color: '#9fb6c6',
     fontSize: 12,
-    marginTop: 4,
   },
-  trainingBadge: {
-    borderRadius: 999,
-    backgroundColor: '#1f2f38',
-    color: '#dbeafe',
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    fontSize: 10,
-    textTransform: 'capitalize',
-    overflow: 'hidden',
-  },
-  trainingBadgeReady: {
-    backgroundColor: '#166534',
-    color: '#dcfce7',
+  metricValue: {
+    color: '#f8fafc',
+    fontWeight: '700',
+    marginTop: 6,
   },
   tagRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
+    marginTop: 14,
   },
   tag: {
     borderRadius: 999,
@@ -303,9 +352,47 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     fontSize: 12,
+  },
+  stepRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  stepDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 999,
+    backgroundColor: '#334155',
+    marginRight: 10,
+  },
+  stepDotComplete: {
+    backgroundColor: '#22c55e',
+  },
+  stepLabel: {
+    color: '#dfeaf3',
+    flexShrink: 1,
+  },
+  stepLabelComplete: {
+    color: '#dcfce7',
+    fontWeight: '700',
+  },
+  exportRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  exportButton: {
+    backgroundColor: '#1d4ed8',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     marginRight: 8,
     marginBottom: 8,
   },
+  exportButtonText: {
+    color: '#eff6ff',
+    fontWeight: '700',
+  },
 });
 
-""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
