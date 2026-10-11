@@ -1,0 +1,15 @@
+{
+  "name": "industrial-digital-twin-mobile",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "services/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:mobile": "npm --workspace apps/mobile run start",
+    "dev:api": "npm --workspace services/api run dev",
+    "build": "npm --workspace packages/shared run build && npm --workspace services/api run build",
+    "lint": "echo 'TODO: add linting'"
+  }
+}
