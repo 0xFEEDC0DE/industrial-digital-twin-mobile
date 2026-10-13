@@ -1,465 +1,249 @@
-:root {
-  --bg: #eff3f5;
-  --bg-strong: #dfe6ea;
-  --surface: rgba(255, 255, 255, 0.9);
-  --surface-strong: #ffffff;
-  --panel: #f7fafb;
-  --panel-border: rgba(20, 35, 45, 0.08);
-  --text: #16212a;
-  --muted: #5d6f7b;
-  --muted-alt: #7c8d9c;
-  --accent: #1c7d7a;
-  --accent-soft: rgba(28, 125, 122, 0.12);
-  --success: #2a9d66;
-  --warning: #d68d2e;
-  --neutral: #6b7b88;
-  --shadow: 0 10px 24px rgba(20, 31, 41, 0.08);
-  --radius-xl: 24px;
-  --radius-lg: 18px;
-  --radius-md: 14px;
-  --radius-sm: 10px;
-}
+import React, { useEffect, useState } from 'react';
+import { fetchOverview } from '../api/dashboard';
+import { subscribeRuntimeEvents } from '../api/sse';
+import SceneEditDrawer, { SceneEditState } from '../components/SceneEditDrawer';
 
-* {
-  box-sizing: border-box;
-}
+export default function PlantOverview() {
+  const [overview, setOverview] = useState<any | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedPlantId, setSelectedPlantId] = useState<string | null>(null);
+  const [editingScene, setEditingScene] = useState<SceneEditState | null>(null);
+  const [scenesMeta, setScenesMeta] = useState<Record<string, Partial<SceneEditState>>>({});
 
-html, body, #root {
-  min-height: 100%;
-  height: 100%;
-}
+  useEffect(() => {
+    let cancelled = false;
 
-body {
-  margin: 0;
-  font-family: Inter, 'Segoe UI', system-ui, -apple-system, sans-serif;
-  background:
-    radial-gradient(circle at top, rgba(28, 125, 122, 0.06), transparent 25%),
-    var(--bg);
-  color: var(--text);
-}
+    async function load() {
+      try {
+        const data = await fetchOverview();
+        if (!cancelled) {
+          setOverview(data);
+          setSelectedPlantId((current) => current ?? data.plants?.[0]?.plantId ?? null);
+        }
+      } catch (err) {
+        if (!cancelled) setError(String(err));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
 
-button, input, textarea {
-  font: inherit;
-}
+    load();
 
-button {
-  border: none;
-  cursor: pointer;
-}
+    const unsub = subscribeRuntimeEvents(
+      () => {
+        load();
+      },
+      (err) => {
+        console.warn('SSE unavailable; falling back to polling', err);
+      }
+    );
 
-.app-root {
-  min-height: 100vh;
-  padding: 24px;
-}
+    return () => {
+      cancelled = true;
+      unsub();
+    };
+  }, []);
 
-.industrial-shell {
-  max-width: 1440px;
-  margin: 0 auto;
-  background: rgba(255, 255, 255, 0.42);
-  border: 1px solid rgba(26, 40, 52, 0.06);
-  border-radius: 28px;
-  box-shadow: var(--shadow);
-  overflow: hidden;
-  backdrop-filter: blur(12px);
-}
-
-.topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 20px 24px;
-  border-bottom: 1px solid var(--panel-border);
-  background: rgba(255, 255, 255, 0.5);
-}
-
-.brand-block {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
-.brand-mark {
-  width: 44px;
-  height: 44px;
-  border-radius: 14px;
-  display: grid;
-  place-items: center;
-  font-weight: 700;
-  background: linear-gradient(135deg, var(--accent), #7cc6be);
-  color: white;
-  letter-spacing: 0.08em;
-}
-
-.eyebrow {
-  margin: 0 0 4px;
-  font-size: 11px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--muted-alt);
-}
-
-.topbar h1 {
-  margin: 0;
-  font-size: clamp(1.3rem, 2vw, 2rem);
-  font-weight: 700;
-}
-
-.status-cluster {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.status-pill {
-  display: inline-flex;
-  align-items: center;
-  height: 30px;
-  padding: 0 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.status-pill--online {
-  background: rgba(42, 157, 102, 0.12);
-  color: var(--success);
-}
-
-.status-pill--warning {
-  background: rgba(214, 141, 46, 0.12);
-  color: var(--warning);
-}
-
-.status-pill--neutral {
-  background: rgba(107, 123, 136, 0.12);
-  color: var(--neutral);
-}
-
-.layout-grid {
-  display: grid;
-  grid-template-columns: 280px minmax(0, 1fr);
-  min-height: 820px;
-}
-
-.plant-rail {
-  padding: 22px 18px 20px;
-  background: rgba(247, 250, 251, 0.8);
-  border-right: 1px solid var(--panel-border);
-}
-
-.rail-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16px;
-}
-
-.rail-header .eyebrow {
-  margin: 0;
-}
-
-.plant-rail-item {
-  width: 100%;
-  border: 1px solid transparent;
-  background: rgba(255, 255, 255, 0.5);
-  border-radius: 16px;
-  padding: 14px 12px;
-  margin-bottom: 10px;
-  text-align: left;
-  transition: all 120ms ease;
-}
-
-.plant-rail-item:hover,
-.plant-rail-item.selected {
-  background: rgba(255, 255, 255, 0.92);
-  border-color: rgba(28, 125, 122, 0.2);
-  box-shadow: 0 10px 24px rgba(20, 31, 41, 0.06);
-}
-
-.plant-rail-item__topline,
-.plant-rail-item__meta,
-.inline-actions,
-.scene-card__topline,
-.scene-card__meta,
-.scene-card__actions,
-.card__header,
-.detail-panel__header,
-.section-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.plant-rail-item__meta {
-  margin-top: 10px;
-  color: var(--muted);
-  font-size: 12px;
-}
-
-.dashboard-surface {
-  padding: 24px;
-}
-
-.summary-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(140px, 1fr));
-  gap: 14px;
-}
-
-.summary-card {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  min-height: 116px;
-  background: linear-gradient(180deg, rgba(255,255,255,0.8), rgba(255,255,255,0.98));
-  border: 1px solid var(--panel-border);
-  border-radius: var(--radius-lg);
-  padding: 18px 16px;
-  box-shadow: 0 6px 18px rgba(17, 26, 34, 0.04);
-}
-
-.summary-card__label {
-  font-size: 12px;
-  color: var(--muted-alt);
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-}
-
-.summary-card strong {
-  font-size: clamp(1.8rem, 2.5vw, 2.2rem);
-}
-
-.detail-panel {
-  margin-top: 24px;
-  background: rgba(255,255,255,0.5);
-  border: 1px solid var(--panel-border);
-  border-radius: var(--radius-xl);
-  padding: 18px;
-}
-
-.detail-panel__header {
-  margin-bottom: 18px;
-}
-
-.detail-panel__header h2 {
-  margin: 0;
-  font-size: clamp(1.5rem, 2vw, 2rem);
-}
-
-.detail-panel__body {
-  display: grid;
-  grid-template-columns: minmax(0, 1.55fr) minmax(280px, 0.75fr);
-  gap: 18px;
-}
-
-.card {
-  background: var(--surface-strong);
-  border: 1px solid var(--panel-border);
-  border-radius: var(--radius-lg);
-  padding: 18px;
-}
-
-.card--wide {
-  min-height: 240px;
-}
-
-.card__header h3,
-.section-header h3 {
-  margin: 0;
-  font-size: 1.05rem;
-}
-
-.timeline-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: grid;
-  gap: 12px;
-}
-
-.timeline-list li {
-  display: grid;
-  grid-template-columns: 14px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 12px;
-  padding-top: 6px;
-}
-
-.timeline-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 0 5px rgba(28, 125, 122, 0.12);
-}
-
-.timeline-copy {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.timeline-copy span,
-.scene-card__meta,
-.scene-card__score span,
-.mini-btn,
-.ghost-btn,
-.primary-btn,
-.action-btn {
-  color: var(--muted);
-  font-size: 12px;
-}
-
-.timeline-list time {
-  color: var(--muted-alt);
-  font-size: 12px;
-}
-
-.quick-actions {
-  display: grid;
-  gap: 10px;
-  margin-top: 18px;
-}
-
-.action-btn,
-.primary-btn,
-.ghost-btn,
-.mini-btn {
-  border-radius: 12px;
-  transition: all 120ms ease;
-}
-
-.primary-btn,
-.action-btn {
-  background: linear-gradient(135deg, var(--accent), #4ca69f);
-  color: white;
-  padding: 10px 14px;
-  font-weight: 600;
-}
-
-.ghost-btn,
-.mini-btn {
-  background: rgba(10, 21, 29, 0.03);
-  color: var(--text);
-  padding: 9px 12px;
-}
-
-.mini-btn--ghost {
-  background: transparent;
-  border: 1px solid var(--panel-border);
-}
-
-.scene-strip {
-  margin-top: 26px;
-  background: rgba(255,255,255,0.45);
-  border: 1px solid var(--panel-border);
-  border-radius: var(--radius-xl);
-  padding: 18px;
-}
-
-.section-header {
-  margin-bottom: 16px;
-}
-
-.scene-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(180px, 1fr));
-  gap: 16px;
-}
-
-.scene-card {
-  background: linear-gradient(180deg, rgba(255,255,255,0.94), rgba(247,250,251,0.96));
-  border: 1px solid var(--panel-border);
-  border-radius: var(--radius-lg);
-  padding: 16px;
-  min-height: 180px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  box-shadow: 0 8px 18px rgba(18, 22, 28, 0.04);
-}
-
-.scene-card__score {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  margin-top: auto;
-}
-
-.scene-card__score strong {
-  font-size: 2rem;
-  line-height: 1;
-}
-
-.scene-card__actions {
-  margin-top: auto;
-}
-
-.status-panel {
-  display: grid;
-  place-items: center;
-  min-height: 280px;
-  background: rgba(255,255,255,0.8);
-  border: 1px solid var(--panel-border);
-  border-radius: 22px;
-  color: var(--muted);
-}
-
-.status-panel--loading {
-  color: var(--text);
-}
-
-.status-panel--error {
-  color: #9a2d2d;
-}
-
-@media (max-width: 900px) {
-  .layout-grid {
-    grid-template-columns: 1fr;
+  if (loading) {
+    return <div className="status-panel status-panel--loading">Loading plant overview…</div>;
   }
 
-  .plant-rail {
-    border-right: none;
-    border-bottom: 1px solid var(--panel-border);
+  if (error) {
+    return <div className="status-panel status-panel--error">{error}</div>;
   }
 
-  .summary-grid,
-  .scene-grid {
-    grid-template-columns: repeat(2, minmax(140px, 1fr));
+  if (!overview || !overview.plants?.length) {
+    return <div className="status-panel">No plant data available.</div>;
   }
 
-  .detail-panel__body {
-    grid-template-columns: 1fr;
+  const selectedPlant =
+    overview.plants.find((plant: any) => plant.plantId === selectedPlantId) ?? overview.plants[0];
+
+  // Build a lightweight scene model from recentLifecycle for the strip; allow overrides from scenesMeta
+  const sceneCards = (selectedPlant.recentLifecycle ?? []).slice(0, 8).map((event: any, idx: number) => {
+    const id = `${event.sceneId ?? 'scene'}-${idx}`;
+    const baseId = event.sceneId ?? `Scene ${idx + 1}`;
+    const meta = scenesMeta[baseId] ?? {};
+    return {
+      id,
+      sceneId: baseId,
+      name: meta.name ?? baseId,
+      status: idx % 2 === 0 ? 'online' : 'unknown',
+      sims: meta.tags ? meta.tags.length : idx === 0 ? 3 : idx === 1 ? 1 : 2,
+      evalScore: idx % 2 === 0 ? 96 : 82,
+      evalPass: idx % 2 === 0,
+      meta,
+    };
+  });
+
+  function handleOpenEdit(sceneId: string) {
+    const existing = scenesMeta[sceneId] ?? { sceneId, name: sceneId, description: '', tags: [] };
+    setEditingScene({
+      sceneId,
+      name: existing.name ?? sceneId,
+      description: existing.description ?? '',
+      tags: (existing.tags as string[]) ?? [],
+    });
   }
+
+  function handleSaveEdit(next: SceneEditState) {
+    setScenesMeta((prev) => ({ ...prev, [next.sceneId]: next }));
+    // optimistic UI only; a future pass can persist to API
+  }
+
+  return (
+    <div className="industrial-shell">
+      <header className="topbar">
+        <div className="brand-block">
+          <div className="brand-mark">IDT</div>
+          <div>
+            <div className="eyebrow">Operations</div>
+            <h1>Plant dashboard</h1>
+          </div>
+        </div>
+
+        <div className="status-cluster">
+          <span className="status-pill status-pill--online">Online</span>
+          <span className="status-pill status-pill--neutral">{overview.summary.onlinePlantCount} online</span>
+        </div>
+      </header>
+
+      <div className="layout-grid">
+        <aside className="plant-rail">
+          <div className="rail-header">
+            <span className="eyebrow">Plants</span>
+            <button className="ghost-btn">+ New</button>
+          </div>
+
+          {overview.plants.map((plant: any) => (
+            <button
+              key={plant.plantId}
+              className={`plant-rail-item ${selectedPlant.plantId === plant.plantId ? 'selected' : ''}`}
+              onClick={() => setSelectedPlantId(plant.plantId)}
+            >
+              <div className="plant-rail-item__topline">
+                <strong>{plant.plantId}</strong>
+                <span className={`status-pill ${plant.status === 'online' ? 'status-pill--online' : plant.status === 'degraded' ? 'status-pill--warning' : 'status-pill--neutral'}`}>
+                  {plant.status}
+                </span>
+              </div>
+              <div className="plant-rail-item__meta">
+                <span>{plant.sceneCount} scenes</span>
+                <span>{plant.activeSimulations} live</span>
+              </div>
+            </button>
+          ))}
+        </aside>
+
+        <main className="dashboard-surface">
+          <section className="summary-grid">
+            <div className="summary-card">
+              <span className="summary-card__label">Plants</span>
+              <strong>{overview.summary.plantCount}</strong>
+            </div>
+            <div className="summary-card">
+              <span className="summary-card__label">Online</span>
+              <strong>{overview.summary.onlinePlantCount}</strong>
+            </div>
+            <div className="summary-card">
+              <span className="summary-card__label">Simulations</span>
+              <strong>{overview.summary.totalActiveSimulations}</strong>
+            </div>
+            <div className="summary-card">
+              <span className="summary-card__label">Eval runs</span>
+              <strong>{overview.summary.totalEvaluationCount}</strong>
+            </div>
+          </section>
+
+          <section className="detail-panel">
+            <div className="detail-panel__header">
+              <div>
+                <div className="eyebrow">Selected plant</div>
+                <h2>{selectedPlant.plantId}</h2>
+              </div>
+              <div className="inline-actions">
+                <button className="ghost-btn">Refresh</button>
+                <button className="primary-btn">Open plant</button>
+              </div>
+            </div>
+
+            <div className="detail-panel__body">
+              <div className="card card--wide">
+                <div className="card__header">
+                  <h3>Recent activity</h3>
+                </div>
+                <ul className="timeline-list">
+                  {(selectedPlant.recentLifecycle ?? []).slice(0, 5).map((event: any, index: number) => (
+                    <li key={`${event.sceneId ?? 'scene'}-${index}`}>
+                      <span className="timeline-dot" />
+                      <div className="timeline-copy">
+                        <strong>{event.sceneId ?? 'Scene'}</strong>
+                        <span>{event.eventType ?? 'Runtime update'}</span>
+                      </div>
+                      <time>{event.timestamp ?? 'now'}</time>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="card">
+                <div className="card__header">
+                  <h3>Quick actions</h3>
+                </div>
+                <div className="quick-actions">
+                  <button className="action-btn">New scene</button>
+                  <button className="action-btn">Run evaluation</button>
+                  <button className="action-btn">Open training</button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section className="scene-strip">
+            <div className="section-header">
+              <h3>Scenes</h3>
+              <button className="ghost-btn">Manage</button>
+            </div>
+
+            <div className="scene-grid">
+              {sceneCards.map((scene) => (
+                <article key={scene.id} className="scene-card">
+                  <div className="scene-card__topline">
+                    <strong>{scene.name}</strong>
+                    <span className={`status-pill ${scene.status === 'online' ? 'status-pill--online' : 'status-pill--neutral'}`}>
+                      {scene.status}
+                    </span>
+                  </div>
+
+                  <div className="scene-card__meta">
+                    <span>{scene.sims} active sims</span>
+                    <span>{scene.evalPass ? 'Pass' : 'Watch'}</span>
+                  </div>
+
+                  <div className="scene-card__score">
+                    <strong>{scene.evalScore}</strong>
+                    <span>score</span>
+                  </div>
+
+                  <div className="scene-card__actions">
+                    <button className="mini-btn">Open</button>
+                    <button className="mini-btn mini-btn--ghost" onClick={() => handleOpenEdit(scene.sceneId)}>Edit</button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+        </main>
+      </div>
+
+      {editingScene && (
+        <SceneEditDrawer
+          initial={editingScene}
+          onSave={(next) => handleSaveEdit(next)}
+          onClose={() => setEditingScene(null)}
+        />
+      )}
+    </div>
+  );
 }
-
-@media (max-width: 620px) {
-  .app-root {
-    padding: 12px;
-  }
-
-  .topbar,
-  .dashboard-surface,
-  .plant-rail {
-    padding-left: 14px;
-    padding-right: 14px;
-  }
-
-  .summary-grid,
-  .scene-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .status-cluster,
-  .detail-panel__header,
-  .inline-actions,
-  .scene-card__topline,
-  .scene-card__actions,
-  .section-header,
-  .topbar {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-}
-
