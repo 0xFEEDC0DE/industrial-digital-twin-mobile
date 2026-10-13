@@ -15,6 +15,7 @@ import { tagbookRoutes } from './routes/tagbook.js';
 import { trainingIoRoutes } from './routes/trainingIo.js';
 import { runtimeLifecycleRoutes } from './routes/runtimeLifecycle.js';
 import { plantRuntimeRoutes } from './routes/plantRuntime.js';
+import { operationalDashboardRoutes } from './routes/dashboard.js';
 
 const app = express();
 const port = Number(process.env.PORT ?? 4000);
@@ -45,6 +46,7 @@ app.use('/api', tagbookRoutes);
 app.use('/api', trainingIoRoutes);
 app.use('/api', runtimeLifecycleRoutes);
 app.use('/api', plantRuntimeRoutes);
+app.use('/api', operationalDashboardRoutes);
 
 app.listen(port, () => {
   console.log(`Industrial digital twin API running on http://localhost:${port}`);
