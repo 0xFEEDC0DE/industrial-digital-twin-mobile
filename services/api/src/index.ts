@@ -10,6 +10,9 @@ import { sceneTagsRoutes } from './routes/sceneTags.js';
 import { debugRoutes } from './routes/debug.js';
 import { runtimeRoutes } from './routes/runtime.js';
 import { operationalRuntimeRoutes } from './routes/operationalRuntime.js';
+import { modularIoRoutes } from './routes/modularIo.js';
+import { tagbookRoutes } from './routes/tagbook.js';
+import { trainingIoRoutes } from './routes/trainingIo.js';
 
 const app = express();
 const port = Number(process.env.PORT ?? 4000);
@@ -35,6 +38,9 @@ app.use('/api', sceneTagsRoutes);
 app.use('/api', debugRoutes);
 app.use('/api', runtimeRoutes);
 app.use('/api', operationalRuntimeRoutes);
+app.use('/api', modularIoRoutes);
+app.use('/api', tagbookRoutes);
+app.use('/api', trainingIoRoutes);
 
 app.listen(port, () => {
   console.log(`Industrial digital twin API running on http://localhost:${port}`);
