@@ -9,7 +9,7 @@ import { scenesRoutes } from './routes/scenes.js';
 import { sceneTagsRoutes } from './routes/sceneTags.js';
 import { debugRoutes } from './routes/debug.js';
 import { runtimeRoutes } from './routes/runtime.js';
-import { historianRuntimeRoutes } from './routes/historianRuntime.js';
+import { operationalRuntimeRoutes } from './routes/operationalRuntime.js';
 
 const app = express();
 const port = Number(process.env.PORT ?? 4000);
@@ -22,7 +22,7 @@ app.get('/api/health', (_req, res) => {
     ok: true,
     service: 'industrial-digital-twin-api',
     timestamp: new Date().toISOString(),
-    version: '0.5.0',
+    version: '0.6.0',
   });
 });
 
@@ -34,7 +34,7 @@ app.use('/api', scenesRoutes);
 app.use('/api', sceneTagsRoutes);
 app.use('/api', debugRoutes);
 app.use('/api', runtimeRoutes);
-app.use('/api', historianRuntimeRoutes);
+app.use('/api', operationalRuntimeRoutes);
 
 app.listen(port, () => {
   console.log(`Industrial digital twin API running on http://localhost:${port}`);
