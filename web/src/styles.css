@@ -1,262 +1,560 @@
-import React, { useEffect, useState } from 'react';
-import { fetchOverview } from '../api/dashboard';
-import { subscribeRuntimeEvents } from '../api/sse';
-import SceneEditDrawer, { SceneEditState } from '../components/SceneEditDrawer';
+/* Industrial Digital Twin: tablet-first operations dashboard (Midnight). */
+:root {
+  --bg: #0b1220;
+  --surface: #0f1828;
+  --surface-strong: #131c2e;
+  --panel: #0b1220;
+  --panel-border: #1e2a40;
+  --line: #2d3a55;
+  --text: #e7ebf3;
+  --muted: #8d97ab;
+  --accent: #f97316;
+  --accent-soft: #fdba74;
+  --ok: #4ade80;
+  --warn: #fbbf24;
+  --bad: #fca5a5;
+  --radius: 14px;
+  --pad: 16px;
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: var(--text);
+  background: var(--bg);
+}
 
-export default function PlantOverview() {
-  const [overview, setOverview] = useState<any | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [selectedPlantId, setSelectedPlantId] = useState<string | null>(null);
-  const [editingScene, setEditingScene] = useState<SceneEditState | null>(null);
-  const [scenesMeta, setScenesMeta] = useState<Record<string, Partial<SceneEditState>>>({});
+* {
+  box-sizing: border-box;
+}
 
-  useEffect(() => {
-    let cancelled = false;
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
 
-    async function load() {
-      try {
-        const data = await fetchOverview();
-        if (!cancelled) {
-          setOverview(data);
-          setSelectedPlantId((current) => current ?? data.plants?.[0]?.plantId ?? null);
-        }
-      } catch (err) {
-        if (!cancelled) setError(String(err));
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  border: 0;
+  background: none;
+}
 
-    load();
+h1,
+h2,
+h3 {
+  margin: 0;
+  letter-spacing: -0.01em;
+}
 
-    const unsub = subscribeRuntimeEvents(
-      () => {
-        load();
-      },
-      (err) => {
-        console.warn('SSE unavailable; falling back to polling', err);
-      }
-    );
+h1 {
+  font-size: 22px;
+}
 
-    return () => {
-      cancelled = true;
-      unsub();
-    };
-  }, []);
+h2 {
+  font-size: 20px;
+}
 
-  if (loading) {
-    return <div className="status-panel status-panel--loading">Loading plant overview…</div>;
+h3 {
+  font-size: 15px;
+}
+
+/* Loading / error states */
+.status-panel {
+  display: grid;
+  place-items: center;
+  min-height: 60vh;
+  color: var(--muted);
+}
+
+.status-panel--error {
+  color: var(--bad);
+}
+
+/* Shell */
+.app-root,
+.industrial-shell {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--panel-border);
+  background: var(--surface);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.brand-block {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-mark {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--accent);
+  color: #111;
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+}
+
+.eyebrow {
+  color: var(--accent-soft);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.status-cluster {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+
+.status-pill::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.status-pill--online {
+  color: var(--ok);
+  border-color: rgba(74, 222, 128, 0.35);
+}
+
+.status-pill--warning {
+  color: var(--warn);
+  border-color: rgba(251, 191, 36, 0.35);
+}
+
+.status-pill--neutral {
+  color: var(--muted);
+}
+
+/* Layout: plant rail + surface */
+.layout-grid {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 18px;
+  padding: 18px 20px 28px;
+}
+
+.plant-rail {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+}
+
+.rail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.plant-rail-item {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  background: var(--surface);
+  text-align: left;
+  min-height: 64px;
+}
+
+.plant-rail-item:hover {
+  border-color: var(--line);
+}
+
+.plant-rail-item.selected {
+  border-color: var(--accent);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.plant-rail-item__topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.plant-rail-item__meta {
+  display: flex;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.dashboard-surface {
+  display: grid;
+  align-content: start;
+  gap: 18px;
+  min-width: 0;
+}
+
+/* Summary metrics */
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.summary-card {
+  display: grid;
+  gap: 6px;
+  padding: var(--pad);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.summary-card__label {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.summary-card strong {
+  font-size: 28px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Selected plant */
+.detail-panel {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.detail-panel__header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.inline-actions,
+.quick-actions,
+.scene-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.detail-panel__body {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 14px;
+}
+
+.card {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  padding: var(--pad);
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  background: var(--panel);
+}
+
+.card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.timeline-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.timeline-list:empty::before {
+  content: "No recent activity.";
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.timeline-list li {
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.timeline-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.timeline-copy {
+  display: grid;
+  min-width: 0;
+}
+
+.timeline-copy span,
+.timeline-list time {
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+/* Buttons: big enough for gloves on a tablet */
+.primary-btn,
+.ghost-btn,
+.action-btn,
+.mini-btn,
+.small-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.primary-btn,
+.small-btn--primary {
+  background: var(--accent);
+  color: #111;
+}
+
+.ghost-btn,
+.small-btn {
+  border: 1px solid var(--line);
+  background: transparent;
+}
+
+.action-btn {
+  flex: 1 1 140px;
+  min-height: 48px;
+  border: 1px solid var(--line);
+  background: var(--surface-strong);
+}
+
+.primary-btn:hover,
+.small-btn--primary:hover {
+  filter: brightness(1.08);
+}
+
+.ghost-btn:hover,
+.action-btn:hover,
+.small-btn:hover,
+.mini-btn:hover {
+  border-color: var(--accent-soft);
+}
+
+/* Scenes */
+.scene-strip {
+  display: grid;
+  gap: 12px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.scene-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.scene-grid:empty::before {
+  content: "No scenes with recent activity.";
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.scene-card {
+  display: grid;
+  gap: 10px;
+  padding: var(--pad);
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.scene-card__topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.scene-card__meta {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.scene-card__score {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.scene-card__score strong {
+  font-size: 26px;
+  font-variant-numeric: tabular-nums;
+}
+
+.scene-card__score span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.mini-btn {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  background: var(--surface-strong);
+}
+
+.mini-btn--ghost {
+  background: transparent;
+  border: 1px solid var(--line);
+}
+
+/* Scene edit drawer */
+.drawer-overlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: end center;
+  background: rgba(3, 6, 12, 0.6);
+  z-index: 1200;
+}
+
+.drawer {
+  width: min(720px, 96%);
+  max-height: 96vh;
+  overflow: auto;
+  padding: 18px;
+  border: 1px solid var(--panel-border);
+  border-radius: 16px 16px 8px 8px;
+  background: var(--surface-strong);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.4);
+}
+
+.drawer__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.drawer__body label {
+  display: block;
+  margin-bottom: 12px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.drawer__body input,
+.drawer__body textarea {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--text);
+  font: 500 15px Inter, system-ui, sans-serif;
+}
+
+.drawer__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+/* Tablet portrait and phones */
+@media (max-width: 1000px) {
+  .layout-grid {
+    grid-template-columns: 1fr;
   }
 
-  if (error) {
-    return <div className="status-panel status-panel--error">{error}</div>;
+  .plant-rail {
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(200px, 1fr);
+    overflow-x: auto;
+    padding-bottom: 4px;
   }
 
-  if (!overview || !overview.plants?.length) {
-    return <div className="status-panel">No plant data available.</div>;
+  .rail-header {
+    display: none;
   }
 
-  const selectedPlant =
-    overview.plants.find((plant: any) => plant.plantId === selectedPlantId) ?? overview.plants[0];
-
-  const sceneCards = (selectedPlant.recentLifecycle ?? []).slice(0, 8).map((event: any, idx: number) => {
-    const id = `${event.sceneId ?? 'scene'}-${idx}`;
-    const baseId = event.sceneId ?? `Scene ${idx + 1}`;
-    const meta = scenesMeta[baseId] ?? {};
-    const tags = Array.isArray(meta.tags) ? meta.tags.slice(0, 2) : ['live', 'plant'];
-
-    return {
-      id,
-      sceneId: baseId,
-      name: meta.name ?? baseId,
-      status: idx % 2 === 0 ? 'online' : 'unknown',
-      sims: meta.tags ? meta.tags.length : idx === 0 ? 3 : idx === 1 ? 1 : 2,
-      evalScore: idx % 2 === 0 ? 96 : 82,
-      evalPass: idx % 2 === 0,
-      tags,
-      meta,
-    };
-  });
-
-  function handleOpenEdit(sceneId: string) {
-    const existing = scenesMeta[sceneId] ?? { sceneId, name: sceneId, description: '', tags: [] };
-    setEditingScene({
-      sceneId,
-      name: existing.name ?? sceneId,
-      description: existing.description ?? '',
-      tags: (existing.tags as string[]) ?? [],
-    });
+  .summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  function handleSaveEdit(next: SceneEditState) {
-    setScenesMeta((prev) => ({ ...prev, [next.sceneId]: next }));
+  .detail-panel__body {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 620px) {
+  .topbar {
+    padding: 12px 14px;
   }
 
-  const activeSceneCount = sceneCards.filter((scene) => scene.status === 'online').length;
+  .layout-grid {
+    padding: 14px;
+  }
 
-  return (
-    <div className="industrial-shell">
-      <header className="topbar">
-        <div className="brand-block">
-          <div className="brand-mark">IDT</div>
-          <div>
-            <div className="eyebrow">Operations</div>
-            <h1>Plant dashboard</h1>
-          </div>
-        </div>
-
-        <div className="status-cluster">
-          <span className="status-pill status-pill--online">Live</span>
-          <span className="status-pill status-pill--neutral">{activeSceneCount} active scenes</span>
-        </div>
-      </header>
-
-      <div className="layout-grid">
-        <aside className="plant-rail">
-          <div className="rail-header">
-            <span className="eyebrow">Plants</span>
-            <button className="ghost-btn">+ New</button>
-          </div>
-
-          {overview.plants.map((plant: any) => (
-            <button
-              key={plant.plantId}
-              className={`plant-rail-item ${selectedPlant.plantId === plant.plantId ? 'selected' : ''}`}
-              onClick={() => setSelectedPlantId(plant.plantId)}
-            >
-              <div className="plant-rail-item__topline">
-                <strong>{plant.plantId}</strong>
-                <span className={`status-pill ${plant.status === 'online' ? 'status-pill--online' : plant.status === 'degraded' ? 'status-pill--warning' : 'status-pill--neutral'}`}>
-                  {plant.status}
-                </span>
-              </div>
-              <div className="plant-rail-item__meta">
-                <span>{plant.sceneCount} scenes</span>
-                <span>{plant.activeSimulations} live</span>
-              </div>
-            </button>
-          ))}
-        </aside>
-
-        <main className="dashboard-surface">
-          <section className="summary-grid">
-            <div className="summary-card">
-              <span className="summary-card__label">Plants</span>
-              <strong>{overview.summary.plantCount}</strong>
-            </div>
-            <div className="summary-card">
-              <span className="summary-card__label">Online</span>
-              <strong>{overview.summary.onlinePlantCount}</strong>
-            </div>
-            <div className="summary-card">
-              <span className="summary-card__label">Simulations</span>
-              <strong>{overview.summary.totalActiveSimulations}</strong>
-            </div>
-            <div className="summary-card">
-              <span className="summary-card__label">Eval runs</span>
-              <strong>{overview.summary.totalEvaluationCount}</strong>
-            </div>
-          </section>
-
-          <section className="detail-panel">
-            <div className="detail-panel__header">
-              <div>
-                <div className="eyebrow">Selected plant</div>
-                <h2>{selectedPlant.plantId}</h2>
-              </div>
-              <div className="inline-actions">
-                <button className="ghost-btn">Refresh</button>
-                <button className="primary-btn">Open plant</button>
-              </div>
-            </div>
-
-            <div className="detail-panel__body">
-              <div className="card card--wide">
-                <div className="card__header">
-                  <h3>Recent activity</h3>
-                  <span className="tiny-text">Last 12 hours</span>
-                </div>
-                <ul className="timeline-list">
-                  {(selectedPlant.recentLifecycle ?? []).slice(0, 5).map((event: any, index: number) => (
-                    <li key={`${event.sceneId ?? 'scene'}-${index}`}>
-                      <span className="timeline-dot" />
-                      <div className="timeline-copy">
-                        <strong>{event.sceneId ?? 'Scene'}</strong>
-                        <span>{event.eventType ?? 'Runtime update'}</span>
-                      </div>
-                      <time>{event.timestamp ?? 'now'}</time>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div className="card">
-                <div className="card__header">
-                  <h3>Quick actions</h3>
-                </div>
-                <div className="quick-actions">
-                  <button className="action-btn">New scene</button>
-                  <button className="action-btn">Run evaluation</button>
-                  <button className="action-btn">Open training</button>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <section className="scene-strip">
-            <div className="section-header">
-              <div>
-                <h3>Scenes</h3>
-                <small className="tiny-text">{selectedPlant.sceneCount} tracked</small>
-              </div>
-              <button className="ghost-btn">Manage</button>
-            </div>
-
-            <div className="scene-grid">
-              {sceneCards.map((scene) => (
-                <article key={scene.id} className="scene-card">
-                  <div className="scene-card__topline">
-                    <strong>{scene.name}</strong>
-                    <span className={`status-pill ${scene.status === 'online' ? 'status-pill--online' : 'status-pill--neutral'}`}>
-                      {scene.status}
-                    </span>
-                  </div>
-
-                  <div className="scene-card__meta">
-                    <span>{scene.sims} active sim{scene.sims === 1 ? '' : 's'}</span>
-                    <span>{scene.evalPass ? 'Pass' : 'Watch'}</span>
-                  </div>
-
-                  <div className="scene-card__badges">
-                    {scene.tags.map((tag: string, idx: number) => (
-                      <span key={`${scene.sceneId}-${tag}-${idx}`} className="mini-tag">{tag}</span>
-                    ))}
-                  </div>
-
-                  <div className="scene-card__score">
-                    <strong>{scene.evalScore}</strong>
-                    <span>score</span>
-                  </div>
-
-                  <div className="scene-card__actions">
-                    <button className="mini-btn">Open</button>
-                    <button className="mini-btn mini-btn--ghost" onClick={() => handleOpenEdit(scene.sceneId)}>Edit</button>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </section>
-        </main>
-      </div>
-
-      {editingScene && (
-        <SceneEditDrawer
-          initial={editingScene}
-          onSave={(next) => handleSaveEdit(next)}
-          onClose={() => setEditingScene(null)}
-        />
-      )}
-    </div>
-  );
+  .drawer {
+    width: 100%;
+    border-radius: 12px 12px 0 0;
+  }
 }
